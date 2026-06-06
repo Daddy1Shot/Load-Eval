@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1f17" />
+<title>Take This Load?</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Take Load?" />
+<style>
+  :root{
+    --ink:#0b1f17;
+    --ink-2:#10291e;
+    --panel:#13241c;
+    --panel-2:#172e23;
+    --line:#27463a;
+    --green:#34d17a;
+    --green-deep:#1f9d57;
+    --amber:#f5b942;
+    --red:#ef5d57;
+    --cream:#f4efe1;
+    --muted:#8fae9f;
+    --muted-2:#658578;
+    --shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(120% 80% at 100% 0%, #16382a 0%, transparent 55%),
+      radial-gradient(140% 90% at 0% 100%, #0d2419 0%, transparent 50%),
+      var(--ink);
+    color:var(--cream);
+    font-family:"Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding:max(14px,env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom));
+    max-width:520px;margin:0 auto;
+  }
+  .display{font-family:"Archivo", "Arial Narrow", sans-serif;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .logo{
+    width:38px;height:38px;border-radius:11px;flex:0 0 auto;
+    background:linear-gradient(150deg,var(--green) 0%, var(--green-deep) 100%);
+    display:grid;place-items:center;color:#06120c;font-weight:800;font-size:20px;
+    box-shadow:0 6px 16px -6px var(--green-deep);
+    font-family:"Archivo",sans-serif;
+  }
+  .brand h1{font-size:18px;margin:0;letter-spacing:-.4px;font-weight:800;line-height:1;}
+  .brand p{margin:2px 0 0;font-size:10.5px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+  .gear{
+    background:var(--panel);border:1px solid var(--line);color:var(--cream);
+    width:42px;height:42px;border-radius:12px;font-size:19px;cursor:pointer;
+    display:grid;place-items:center;transition:.15s;
+  }
+  .gear:active{transform:scale(.92);background:var(--panel-2);}
+
+  .card{
+    background:linear-gradient(180deg,var(--panel) 0%, var(--ink-2) 100%);
+    border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;
+    box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-family:"Archivo",sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--muted);margin:0 0 12px;font-weight:700;display:flex;align-items:center;gap:8px;
+  }
+  .card h2 .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);}
+
+  label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;letter-spacing:.4px;text-transform:uppercase;}
+  .field{margin-bottom:12px;}
+  input[type=text],input[type=number]{
+    width:100%;background:var(--ink);border:1px solid var(--line);border-radius:11px;
+    color:var(--cream);font-size:16px;padding:13px 14px;font-family:inherit;outline:none;transition:.15s;
+  }
+  input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(52,209,122,.15);}
+  input::placeholder{color:var(--muted-2);}
+
+  .payout-wrap{position:relative;}
+  .payout-wrap .dollar{
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    color:var(--green);font-size:24px;font-weight:700;font-family:"Archivo",sans-serif;pointer-events:none;
+  }
+  #payout{font-size:28px;font-weight:700;padding:14px 14px 14px 34px;font-family:"Archivo",sans-serif;letter-spacing:-.5px;}
+
+  .route{position:relative;padding-left:26px;}
+  .route::before{
+    content:"";position:absolute;left:7px;top:14px;bottom:50px;width:2px;
+    background:repeating-linear-gradient(var(--line) 0 6px, transparent 6px 12px);
+  }
+  .stop{position:relative;margin-bottom:11px;}
+  .stop .pin{position:absolute;left:-26px;top:32px;width:16px;height:16px;border-radius:50%;
+    border:2px solid var(--ink);display:grid;place-items:center;font-size:9px;}
+  .pin.home{background:var(--cream);color:var(--ink);}
+  .pin.pick{background:var(--amber);color:var(--ink);}
+  .pin.drop{background:var(--red);color:#fff;}
+  .pin.ret{background:var(--muted);color:var(--ink);}
+
+  .leg-miles{display:flex;gap:8px;margin-top:6px;}
+  .leg-miles .mi{flex:1;}
+  .leg-miles input{font-size:14px;padding:9px 10px;text-align:center;}
+  .mi-tag{font-size:9.5px;color:var(--muted-2);text-align:center;margin-top:3px;letter-spacing:.3px;text-transform:uppercase;}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .toggle{display:flex;align-items:center;justify-content:space-between;
+    background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:11px 14px;margin-bottom:12px;}
+  .toggle span{font-size:12.5px;color:var(--cream);}
+  .toggle small{display:block;color:var(--muted-2);font-size:10px;margin-top:2px;text-transform:none;letter-spacing:0;}
+  .sw{width:46px;height:27px;border-radius:20px;background:var(--line);position:relative;transition:.2s;flex:0 0 auto;cursor:pointer;}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:var(--cream);transition:.2s;}
+  .sw.on{background:var(--green-deep);}
+  .sw.on::after{left:22px;background:#fff;}
+
+  .btn-eval{
+    width:100%;border:none;border-radius:15px;padding:18px;cursor:pointer;
+    font-family:"Archivo",sans-serif;font-size:18px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+    background:linear-gradient(150deg,var(--green) 0%, var(--green-deep) 100%);
+    color:#06120c;box-shadow:0 12px 28px -10px var(--green-deep);transition:.15s;margin-top:2px;
+  }
+  .btn-eval:active{transform:scale(.98);}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--muted);
+    border-radius:11px;padding:11px;font-family:inherit;font-size:12px;cursor:pointer;width:100%;margin-top:10px;}
+  .btn-ghost:active{background:var(--panel);}
+
+  /* fuel banner */
+  .fuel{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);
+    background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:9px 13px;margin-bottom:12px;}
+  .fuel b{color:var(--cream);font-family:"Archivo",sans-serif;font-size:14px;}
+  .fuel .src{font-size:9px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.5px;}
+  .mini{background:var(--panel-2);border:1px solid var(--line);color:var(--green);border-radius:8px;
+    font-size:10px;padding:6px 9px;cursor:pointer;font-family:inherit;}
+
+  /* verdict */
+  #result{display:none;}
+  .verdict{border-radius:18px;padding:20px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden;}
+  .verdict .vlabel{font-family:"Archivo",sans-serif;font-size:34px;font-weight:800;letter-spacing:-.5px;line-height:1;margin:0;}
+  .verdict .vsub{font-size:12px;margin:8px 0 0;opacity:.85;}
+  .v-good{background:linear-gradient(150deg,#1c5c39,#0f3a23);border:1px solid var(--green);}
+  .v-good .vlabel{color:var(--green);text-shadow:0 0 24px rgba(52,209,122,.5);}
+  .v-marg{background:linear-gradient(150deg,#5c4a17,#36290d);border:1px solid var(--amber);}
+  .v-marg .vlabel{color:var(--amber);text-shadow:0 0 24px rgba(245,185,66,.4);}
+  .v-rej{background:linear-gradient(150deg,#5c2320,#371413);border:1px solid var(--red);}
+  .v-rej .vlabel{color:var(--red);text-shadow:0 0 24px rgba(239,93,87,.4);}
+  .vicon{font-size:30px;line-height:1;margin-bottom:6px;}
+
+  .why{background:rgba(0,0,0,.25);border-radius:12px;padding:13px 14px;margin-top:14px;text-align:left;}
+  .why h4{font-family:"Archivo",sans-serif;margin:0 0 7px;font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.8;}
+  .why p{margin:0 0 7px;font-size:12.5px;line-height:1.5;}
+  .why p:last-child{margin-bottom:0;}
+  .why .fix{color:var(--cream);}
+  .why b{color:#fff;}
+
+  /* metrics */
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:14px;overflow:hidden;}
+  .metric{background:var(--ink-2);padding:14px 12px;}
+  .metric .k{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+  .metric .v{font-family:"Archivo",sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px;}
+  .metric.hero{grid-column:span 2;background:var(--ink);}
+  .metric.hero .v{font-size:30px;}
+  .metric .note{font-size:9px;color:var(--muted-2);margin-top:3px;}
+  .pos{color:var(--green);}.neg{color:var(--red);}
+  .breakdown{margin-top:13px;font-size:12px;}
+  .breakdown .bl{display:flex;justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line);}
+  .breakdown .bl:last-child{border-bottom:none;}
+  .breakdown .bl span:first-child{color:var(--muted);}
+  .breakdown .bl.tot{font-family:"Archivo",sans-serif;font-weight:700;font-size:14px;border-top:2px solid var(--line);margin-top:3px;padding-top:10px;}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(4,12,8,.72);backdrop-filter:blur(6px);z-index:50;
+    display:none;align-items:flex-end;justify-content:center;}
+  .modal.show{display:flex;}
+  .sheet{background:var(--ink-2);border:1px solid var(--line);border-bottom:none;
+    border-radius:22px 22px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+    padding:8px 16px calc(26px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.9,.3,1);}
+  @keyframes up{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .grab{width:40px;height:4px;background:var(--line);border-radius:3px;margin:8px auto 16px;}
+  .sheet h3{font-family:"Archivo",sans-serif;font-size:17px;margin:0 0 4px;letter-spacing:-.3px;}
+  .sheet .sub{font-size:11px;color:var(--muted);margin:0 0 18px;}
+  .seg{font-family:"Archivo",sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--green);
+    margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .seg:first-of-type{margin-top:4px;}
+  .save{width:100%;border:none;border-radius:13px;padding:16px;margin-top:22px;cursor:pointer;
+    font-family:"Archivo",sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+    background:linear-gradient(150deg,var(--green),var(--green-deep));color:#06120c;}
+  .save:active{transform:scale(.98);}
+  .hint{font-size:10.5px;color:var(--muted-2);margin-top:5px;line-height:1.4;text-transform:none;letter-spacing:0;}
+  .splitfield{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .footnote{text-align:center;font-size:9.5px;color:var(--muted-2);margin-top:6px;line-height:1.5;}
+  .api-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted-2);margin-right:4px;}
+  .api-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+  @media (max-width:360px){
+    #payout{font-size:24px;}.verdict .vlabel{font-size:28px;}.metric.hero .v{font-size:26px;}
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">$</div>
+    <div>
+      <h1 class="display">TAKE THIS LOAD?</h1>
+      <p>Deadhead-aware load evaluator</p>
+    </div>
+  </div>
+  <button class="gear" id="openSettings" aria-label="Settings">⚙</button>
+</header>
+
+<!-- FUEL BANNER -->
+<div class="fuel">
+  <div>Fuel <b id="fuelShow">$3.72</b>/gal · <span id="vehShow">Cargo Van</span> @ <span id="mpgShow">13</span> mpg</div>
+  <div style="text-align:right">
+    <div class="src" id="fuelSrc">TX default</div>
+    <button class="mini" id="refreshFuel" style="margin-top:4px">↻ update</button>
+  </div>
+</div>
+
+<!-- LOAD ENTRY -->
+<div class="card">
+  <h2><span class="dot"></span>The Offer</h2>
+  <div class="field">
+    <label>Offered payout (what the app pays)</label>
+    <div class="payout-wrap">
+      <span class="dollar">$</span>
+      <input type="number" id="payout" inputmode="decimal" placeholder="0.00" />
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="dot"></span>The Real Route</h2>
+  <div class="route">
+    <div class="stop">
+      <div class="pin home">⌂</div>
+      <label>Start (home base)</label>
+      <input type="text" id="addrHome" placeholder="Home address" />
+    </div>
+    <div class="stop">
+      <div class="pin pick">P</div>
+      <label>Pickup</label>
+      <input type="text" id="addrPick" placeholder="Pickup address" />
+    </div>
+    <div class="stop">
+      <div class="pin drop">D</div>
+      <label>Dropoff</label>
+      <input type="text" id="addrDrop" placeholder="Dropoff address" />
+    </div>
+    <div class="stop" id="retStop">
+      <div class="pin ret">⌂</div>
+      <label>Return to</label>
+      <input type="text" id="addrRet" placeholder="Return address (defaults to home)" />
+    </div>
+  </div>
+
+  <div class="toggle" style="margin-top:6px">
+    <div><span>Staying out</span><small>Skip the drive home — waiting near pickup zone</small></div>
+    <div class="sw" id="swStayout"></div>
+  </div>
+
+  <button class="btn-ghost" id="lookupBtn">⤓ Auto-fill miles &amp; time from addresses</button>
+
+  <div style="margin-top:14px">
+    <label>Miles per leg (auto or manual)</label>
+    <div class="leg-miles">
+      <div class="mi"><input type="number" id="mi1" inputmode="decimal" placeholder="0" /><div class="mi-tag">Home→Pick</div></div>
+      <div class="mi"><input type="number" id="mi2" inputmode="decimal" placeholder="0" /><div class="mi-tag">Pick→Drop *paid*</div></div>
+      <div class="mi" id="mi3wrap"><input type="number" id="mi3" inputmode="decimal" placeholder="0" /><div class="mi-tag">Drop→Home</div></div>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:14px">
+    <label>Total time, all legs (minutes)</label>
+    <input type="number" id="mins" inputmode="numeric" placeholder="e.g. 90" />
+    <div class="hint">Include drive + expected load/unload wait. Drives your $/hour.</div>
+  </div>
+
+  <div class="field">
+    <label>Cargo weight — optional (lbs)</label>
+    <input type="number" id="weight" inputmode="numeric" placeholder="optional" />
+  </div>
+</div>
+
+<button class="btn-eval" id="evalBtn">Evaluate ▸</button>
+
+<!-- RESULT -->
+<div id="result">
+  <div class="verdict" id="verdict">
+    <div class="vicon" id="vicon"></div>
+    <p class="vlabel" id="vlabel"></p>
+    <p class="vsub" id="vsub"></p>
+    <div class="why" id="whyBox"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>The Numbers</h2>
+    <div class="metrics">
+      <div class="metric hero">
+        <div class="k">Profit after costs</div>
+        <div class="v" id="mProfit">—</div>
+      </div>
+      <div class="metric">
+        <div class="k">$/Total mile</div>
+        <div class="v" id="mPerTotal">—</div>
+        <div class="note">drives the verdict</div>
+      </div>
+      <div class="metric">
+        <div class="k">$/Loaded mile</div>
+        <div class="v" id="mPerLoaded">—</div>
+        <div class="note">what the app implied</div>
+      </div>
+      <div class="metric">
+        <div class="k">$/Hour</div>
+        <div class="v" id="mPerHour">—</div>
+      </div>
+      <div class="metric">
+        <div class="k">Total route</div>
+        <div class="v" id="mMiles">—</div>
+        <div class="note" id="mDead">—</div>
+      </div>
+    </div>
+
+    <div class="breakdown">
+      <div class="bl"><span>Payout</span><span id="bPay">—</span></div>
+      <div class="bl"><span>Fuel cost</span><span id="bFuel">—</span></div>
+      <div class="bl"><span>Wear &amp; tear</span><span id="bWear">—</span></div>
+      <div class="bl tot"><span>Net profit</span><span id="bProfit">—</span></div>
+    </div>
+  </div>
+  <button class="btn-ghost" id="resetBtn">Clear &amp; evaluate another</button>
+</div>
+
+<div class="footnote">
+  <span class="api-dot" id="apiDot"></span><span id="apiState">Distance API not configured — manual miles</span><br>
+  Works fully offline. Your settings stay on this device.
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="settingsModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 class="display">Settings &amp; Baseline</h3>
+    <p class="sub">Set once. Tune anytime. All values editable.</p>
+
+    <div class="seg">Vehicle</div>
+    <div class="field"><label>Vehicle label</label><input type="text" id="sVeh" /></div>
+    <div class="splitfield">
+      <div class="field"><label>MPG</label><input type="number" id="sMpg" inputmode="decimal" /></div>
+      <div class="field"><label>Wear &amp; tear $/mi</label><input type="number" id="sWear" inputmode="decimal" /></div>
+    </div>
+
+    <div class="seg">Home Base</div>
+    <div class="field">
+      <label>Default home address</label>
+      <input type="text" id="sHome" />
+      <div class="hint">Relocating soon? Update this one field and every new load uses it.</div>
+    </div>
+
+    <div class="seg">Decision Thresholds ($ / total mile)</div>
+    <div class="splitfield">
+      <div class="field"><label>Reject below</label><input type="number" id="sReject" inputmode="decimal" /></div>
+      <div class="field"><label>Good at / above</label><input type="number" id="sGood" inputmode="decimal" /></div>
+    </div>
+    <div class="field">
+      <label>Minimum $/hour floor</label>
+      <input type="number" id="sHour" inputmode="decimal" />
+      <div class="hint">A load can pass $/mile but still fail here if it eats too much time.</div>
+    </div>
+
+    <div class="seg">Fuel</div>
+    <div class="field">
+      <label>Fuel price $/gal</label>
+      <input type="number" id="sFuel" inputmode="decimal" />
+      <div class="hint">Texas avg is pre-loaded. Auto-update pulls a fresh price when a fuel API key is set below.</div>
+    </div>
+
+    <div class="seg">APIs — optional (swappable)</div>
+    <div class="field">
+      <label>Distance provider</label>
+      <select id="sProvider" style="width:100%;background:var(--ink);border:1px solid var(--line);border-radius:11px;color:var(--cream);font-size:15px;padding:13px 14px;font-family:inherit;">
+        <option value="none">None — manual miles only</option>
+        <option value="distancematrix">Distancematrix.ai (free tier)</option>
+        <option value="google">Google Compute Route Matrix</option>
+      </select>
+      <div class="hint">Leave on "None" for manual miles. To auto-fill: pick Distancematrix.ai, get a free key at distancematrix.ai (1,000 lookups/mo, no card), paste below. One matrix call per trip = ~330 trips/mo on the free tier.</div>
+    </div>
+    <div class="field"><label>Distance API key</label><input type="text" id="sDistKey" placeholder="paste key (optional)" /></div>
+    <div class="field">
+      <label>Fuel API key — optional</label>
+      <input type="text" id="sFuelKey" placeholder="paste key (optional)" />
+      <div class="hint">No key? The ↻ update button just re-applies your saved Texas default.</div>
+    </div>
+
+    <button class="save" id="saveSettings">Save settings</button>
+  </div>
+</div>
+
+<script>
+/* ---------- DEFAULTS (Kory's baseline) ---------- */
+const DEFAULTS = {
+  veh:"Cargo Van",
+  mpg:13,
+  wear:0.15,
+  home:"",
+  reject:0.75,   // $/total mile -> below = REJECT
+  good:1.25,     // $/total mile -> at/above = GOOD
+  hour:20,       // $/hour floor
+  fuel:3.72,     // TX avg, Jun 2026
+  fuelSrc:"TX default",
+  provider:"none",
+  distKey:"",
+  fuelKey:""
+};
+const LS="takeload.cfg.v1";
+function loadCfg(){try{return {...DEFAULTS, ...(JSON.parse(localStorage.getItem(LS))||{})};}catch(e){return {...DEFAULTS};}}
+function saveCfg(c){localStorage.setItem(LS, JSON.stringify(c));}
+let cfg = loadCfg();
+
+const $=id=>document.getElementById(id);
+const money=n=>(n<0?"-$":"$")+Math.abs(n).toFixed(2);
+const num=id=>{const v=parseFloat($(id).value);return isNaN(v)?0:v;};
+
+/* ---------- render baseline strip ---------- */
+function paintStrip(){
+  $("fuelShow").textContent="$"+Number(cfg.fuel).toFixed(2);
+  $("fuelSrc").textContent=cfg.fuelSrc;
+  $("vehShow").textContent=cfg.veh;
+  $("mpgShow").textContent=cfg.mpg;
+  $("addrHome").value=cfg.home||"";
+  const live = cfg.provider!=="none" && cfg.distKey;
+  $("apiDot").classList.toggle("live", !!live);
+  $("apiState").textContent = live
+    ? "Distance API active ("+cfg.provider+")"
+    : "Distance API not configured — manual miles";
+}
+paintStrip();
+
+/* ---------- staying out toggle ---------- */
+let stayOut=false;
+$("swStayout").addEventListener("click",()=>{
+  stayOut=!stayOut;
+  $("swStayout").classList.toggle("on",stayOut);
+  $("retStop").style.opacity=stayOut?.4:1;
+  $("mi3wrap").style.opacity=stayOut?.4:1;
+  $("addrRet").disabled=stayOut;$("mi3").disabled=stayOut;
+  if(stayOut){$("mi3").value="";}
+});
+
+/* ---------- settings modal ---------- */
+function openSettings(){
+  $("sVeh").value=cfg.veh;$("sMpg").value=cfg.mpg;$("sWear").value=cfg.wear;
+  $("sHome").value=cfg.home;$("sReject").value=cfg.reject;$("sGood").value=cfg.good;
+  $("sHour").value=cfg.hour;$("sFuel").value=cfg.fuel;$("sProvider").value=cfg.provider;
+  $("sDistKey").value=cfg.distKey;$("sFuelKey").value=cfg.fuelKey;
+  $("settingsModal").classList.add("show");
+}
+$("openSettings").addEventListener("click",openSettings);
+$("settingsModal").addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.remove("show");});
+$("saveSettings").addEventListener("click",()=>{
+  cfg.veh=$("sVeh").value||"Cargo Van";
+  cfg.mpg=parseFloat($("sMpg").value)||13;
+  cfg.wear=parseFloat($("sWear").value)||0;
+  cfg.home=$("sHome").value.trim();
+  cfg.reject=parseFloat($("sReject").value)||0.75;
+  cfg.good=parseFloat($("sGood").value)||1.25;
+  cfg.hour=parseFloat($("sHour").value)||0;
+  cfg.fuel=parseFloat($("sFuel").value)||3.72;
+  cfg.fuelSrc="manual";
+  cfg.provider=$("sProvider").value;
+  cfg.distKey=$("sDistKey").value.trim();
+  cfg.fuelKey=$("sFuelKey").value.trim();
+  saveCfg(cfg);paintStrip();
+  $("settingsModal").classList.remove("show");
+});
+
+/* ---------- fuel update (swappable; falls back to saved default) ---------- */
+$("refreshFuel").addEventListener("click",async()=>{
+  if(cfg.fuelKey){
+    // Seam for a real fuel API. Wire your provider here, e.g.:
+    // const r = await fetch(`https://YOUR_FUEL_API?state=TX&key=${cfg.fuelKey}`);
+    // const j = await r.json(); cfg.fuel = j.regular; cfg.fuelSrc="live TX";
+    $("fuelSrc").textContent="add fuel API in code";
+  }
+  cfg.fuelSrc = cfg.fuelKey ? cfg.fuelSrc : "TX default";
+  saveCfg(cfg);paintStrip();
+});
+
+/* ---------- distance lookup (swappable, ONE matrix call per trip) ---------- */
+$("lookupBtn").addEventListener("click",async()=>{
+  const home=$("addrHome").value.trim(), pick=$("addrPick").value.trim(),
+        drop=$("addrDrop").value.trim(), ret=(stayOut?"":($("addrRet").value.trim()||home));
+  if(!home||!pick||!drop){alert("Enter home, pickup and dropoff addresses first — or just type miles manually.");return;}
+  if(cfg.provider==="none"||!cfg.distKey){
+    alert("No distance API key yet.\n\nFree fix: go to distancematrix.ai, grab a free API key (1,000 lookups/month, no card), paste it in Settings under APIs, and set provider to Distancematrix.ai.\n\nOr just type the miles for each leg by hand — the app works exactly the same either way.");
+    return;
+  }
+  $("lookupBtn").textContent="Looking up…";
+  try{
+    /* === SWAPPABLE DISTANCE MODULE ===
+       Build all 3 legs in ONE matrix request:
+         origins      = [home, pick, drop]
+         destinations = [pick, drop, ret]
+       Read the diagonal: home→pick, pick→drop, drop→ret.
+       Wire your chosen provider below using cfg.provider + cfg.distKey.
+    */
+    const result = await getMatrix([home,pick,drop],[pick,drop,ret],cfg);
+    if(result){
+      $("mi1").value=result.legs[0].miles.toFixed(1);
+      $("mi2").value=result.legs[1].miles.toFixed(1);
+      if(!stayOut)$("mi3").value=result.legs[2].miles.toFixed(1);
+      if(result.minutes)$("mins").value=Math.round(result.minutes);
+    }
+  }catch(err){
+    alert("Lookup failed — enter miles manually.\n("+err.message+")");
+  }
+  $("lookupBtn").textContent="⤓ Auto-fill miles & time from addresses";
+});
+
+/* ONE matrix call per trip. We send origins=[home,pick,drop] x
+   destinations=[pick,drop,ret] and read the DIAGONAL:
+     rows[0].elements[0] = home->pick   (leg 1)
+     rows[1].elements[1] = pick->drop   (leg 2, paid)
+     rows[2].elements[2] = drop->ret    (leg 3)
+   That's a single request for all three legs. */
+const M_PER_MILE = 1609.344;
+
+async function getMatrix(origins,destinations,cfg){
+  if(cfg.provider==="distancematrix"){
+    return await dmAi(origins,destinations,cfg.distKey);
+  }
+  if(cfg.provider==="google"){
+    return await googleMatrix(origins,destinations,cfg.distKey);
+  }
+  throw new Error("no provider selected");
+}
+
+/* ---- Distancematrix.ai (free tier, Google-compatible) ---- */
+async function dmAi(origins,destinations,key){
+  const o=origins.map(encodeURIComponent).join("|");
+  const d=destinations.map(encodeURIComponent).join("|");
+  const url=`https://api.distancematrix.ai/maps/api/distancematrix/json`+
+            `?origins=${o}&destinations=${d}&units=imperial&key=${encodeURIComponent(key)}`;
+  const res=await fetch(url);
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const j=await res.json();
+  if(j.status && j.status!=="OK") throw new Error(j.status);
+  return readDiagonal(j.rows);
+}
+
+/* ---- Google Compute/Distance Matrix (same response shape) ---- */
+async function googleMatrix(origins,destinations,key){
+  const o=origins.map(encodeURIComponent).join("|");
+  const d=destinations.map(encodeURIComponent).join("|");
+  const url=`https://maps.googleapis.com/maps/api/distancematrix/json`+
+            `?origins=${o}&destinations=${d}&units=imperial&key=${encodeURIComponent(key)}`;
+  const res=await fetch(url);          // note: Google needs a referrer-restricted key or proxy for browser CORS
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const j=await res.json();
+  if(j.status && j.status!=="OK") throw new Error(j.status||"google error");
+  return readDiagonal(j.rows);
+}
+
+/* shared: pull the 3 diagonal elements -> miles + minutes */
+function readDiagonal(rows){
+  if(!rows || rows.length<3) throw new Error("bad matrix response");
+  const legs=[]; let totalMin=0;
+  for(let i=0;i<3;i++){
+    const el=rows[i] && rows[i].elements && rows[i].elements[i];
+    if(!el || (el.status && el.status!=="OK")) throw new Error("no route for leg "+(i+1));
+    const meters = el.distance.value;
+    const secs   = el.duration ? el.duration.value : 0;
+    const miles  = meters / M_PER_MILE;
+    const minutes= secs/60;
+    legs.push({miles,minutes});
+    totalMin += minutes;
+  }
+  return { legs, minutes: totalMin };
+}
+
+/* ---------- THE ENGINE ---------- */
+function evaluate(){
+  const payout=num("payout");
+  const mi1=num("mi1"), mi2=num("mi2"), mi3=stayOut?0:num("mi3");
+  const total=mi1+mi2+mi3, dead=mi1+mi3, loaded=mi2;
+  const mins=num("mins"), hrs=mins/60;
+
+  if(payout<=0 || total<=0){alert("Enter at least a payout and the leg miles (Home→Pick→Drop).");return;}
+
+  const fuelCost=(total/cfg.mpg)*cfg.fuel;
+  const wearCost=total*cfg.wear;
+  const opCost=fuelCost+wearCost;
+  const profit=payout-opCost;
+  const perTotal=payout/total;
+  const perLoaded=loaded>0?payout/loaded:0;
+  const perHour=hrs>0?profit/hrs:null;
+
+  /* verdict logic */
+  let tier; // good / marg / rej
+  const failMile = perTotal<cfg.reject;
+  const failProfit = profit<=0;
+  const failHour = (perHour!==null && perHour<cfg.hour);
+  const goodMile = perTotal>=cfg.good;
+
+  if(failProfit||failMile) tier="rej";
+  else if(goodMile && !failHour) tier="good";
+  else tier="marg";
+
+  paintResult({payout,total,dead,loaded,mins,hrs,fuelCost,wearCost,profit,
+    perTotal,perLoaded,perHour,tier,failMile,failProfit,failHour,goodMile});
+}
+
+function paintResult(r){
+  $("result").style.display="block";
+  const V=$("verdict");V.className="verdict";
+  const map={good:["v-good","✅","GOOD LOAD"],marg:["v-marg","⚠️","MARGINAL"],rej:["v-rej","⛔","REJECT"]};
+  const [cls,icon,word]=map[r.tier];
+  V.classList.add(cls);$("vicon").textContent=icon;$("vlabel").textContent=word;
+
+  /* subline */
+  let sub="";
+  if(r.tier==="good") sub=`$${r.perTotal.toFixed(2)}/total-mi · ${money(r.profit)} profit`;
+  else if(r.tier==="marg") sub=`Pays the bills, but it's not a winner`;
+  else sub=`Not worth the wheels turning`;
+  $("vsub").textContent=sub;
+
+  /* WHY box — always explain; for reject, show the fix */
+  const why=$("whyBox");
+  let html="";
+  if(r.tier==="rej"){
+    html+=`<h4>Why rejected</h4>`;
+    const reasons=[];
+    if(r.failProfit) reasons.push(`After fuel and wear you'd <b>lose ${money(Math.abs(r.profit))}</b> — the costs beat the payout.`);
+    if(r.failMile && !r.failProfit) reasons.push(`<b>$${r.perTotal.toFixed(2)}/total-mile</b> is below your floor of <b>$${cfg.reject.toFixed(2)}</b>. The deadhead (${r.dead.toFixed(1)} unpaid mi) is dragging it down.`);
+    else if(r.failMile && r.failProfit) reasons.push(`And $${r.perTotal.toFixed(2)}/total-mile is under your $${cfg.reject.toFixed(2)} floor once you count all ${r.total.toFixed(1)} miles.`);
+    reasons.forEach(x=>html+=`<p>${x}</p>`);
+
+    /* what would make it acceptable */
+    html+=`<h4 style="margin-top:11px">What would flip it</h4>`;
+    const needMileGood = cfg.good*r.total;       // payout to be GOOD on $/mile
+    const needMileOk   = cfg.reject*r.total;     // payout to clear reject floor
+    const needProfit   = r.fuelCost+r.wearCost;  // payout to break even
+    const target = Math.max(needMileOk, needProfit);
+    html+=`<p class="fix">• Payout of <b>${money(needMileOk)}</b> clears your $${cfg.reject.toFixed(2)}/mi floor → Marginal.</p>`;
+    html+=`<p class="fix">• Payout of <b>${money(needMileGood)}</b> makes it a clean Good load.</p>`;
+    if(r.failProfit) html+=`<p class="fix">• You're below break-even — you need at least <b>${money(needProfit)}</b> just to not lose money.</p>`;
+    if(r.dead>0){
+      const noDeadPerMile = r.loaded>0 ? r.payout/r.loaded : 0;
+      html+=`<p class="fix">• Or cut the deadhead: with no empty miles this load is <b>$${noDeadPerMile.toFixed(2)}/mi</b>. Stack it with a load near pickup or a backhaul home.</p>`;
+    }
+  } else if(r.tier==="marg"){
+    html+=`<h4>Why only marginal</h4>`;
+    if(r.failHour){
+      const needHr=(cfg.hour*r.hrs)+r.fuelCost+r.wearCost;
+      html+=`<p>Per-mile is fine ($${r.perTotal.toFixed(2)}), but <b>${money(r.perHour)}/hr</b> is under your $${cfg.hour.toFixed(0)}/hr floor — it ties up too much time.</p>`;
+      html+=`<p class="fix">• ${money(needHr)} payout, or trimming the time to ~${Math.round((r.profit/cfg.hour)*60)} min, gets you to your hourly target.</p>`;
+    } else {
+      const needGood=cfg.good*r.total;
+      html+=`<p>It clears your reject floor but sits below your <b>$${cfg.good.toFixed(2)}/mi</b> "good" line.</p>`;
+      html+=`<p class="fix">• ${money(needGood)} would make it a clean Good load. Take it if it's slow or it positions you well; pass if better pings are coming.</p>`;
+    }
+  } else {
+    html+=`<h4>Why it's good</h4>`;
+    html+=`<p>$${r.perTotal.toFixed(2)}/total-mile beats your $${cfg.good.toFixed(2)} line${r.perHour!==null?` and ${money(r.perHour)}/hr clears your $${cfg.hour.toFixed(0)} floor`:``}. Net <b>${money(r.profit)}</b> after costs.</p>`;
+  }
+  why.innerHTML=html;
+
+  /* metrics */
+  $("mProfit").textContent=money(r.profit);
+  $("mProfit").className="v "+(r.profit>=0?"pos":"neg");
+  $("mPerTotal").textContent="$"+r.perTotal.toFixed(2);
+  $("mPerTotal").className="v "+(r.perTotal>=cfg.reject?"pos":"neg");
+  $("mPerLoaded").textContent=r.perLoaded>0?"$"+r.perLoaded.toFixed(2):"—";
+  $("mPerHour").textContent=r.perHour!==null?money(r.perHour):"—";
+  $("mPerHour").className="v "+(r.perHour!==null&&r.perHour>=cfg.hour?"pos":(r.perHour!==null?"neg":""));
+  $("mMiles").textContent=r.total.toFixed(1)+" mi";
+  $("mDead").textContent=`${r.dead.toFixed(1)} deadhead + ${r.loaded.toFixed(1)} loaded`;
+
+  $("bPay").textContent=money(r.payout);
+  $("bFuel").textContent="-"+money(r.fuelCost);
+  $("bWear").textContent="-"+money(r.wearCost);
+  $("bProfit").textContent=money(r.profit);
+  $("bProfit").className=r.profit>=0?"pos":"neg";
+
+  $("result").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+$("evalBtn").addEventListener("click",evaluate);
+$("resetBtn").addEventListener("click",()=>{
+  ["payout","addrPick","addrDrop","addrRet","mi1","mi2","mi3","mins","weight"].forEach(id=>$(id).value="");
+  if(stayOut)$("swStayout").click();
+  $("result").style.display="none";
+  window.scrollTo({top:0,behavior:"smooth"});
+  $("payout").focus();
+});
+
+/* ---------- register service worker ---------- */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
