@@ -219,7 +219,7 @@
     <div class="logo">$</div>
     <div>
       <h1 class="display">TAKE THIS LOAD?</h1>
-      <p>Deadhead-aware load evaluator</p>
+      <p>Deadhead-aware load evaluator · <span id="verLabel">v2.3</span></p>
     </div>
   </div>
   <div style="display:flex;gap:8px">
@@ -355,7 +355,8 @@
 
 <div class="footnote">
   <span class="api-dot" id="apiDot"></span><span id="apiState">Distance API not configured — manual miles</span><br>
-  Works fully offline. Your settings stay on this device.
+  Works fully offline. Your settings stay on this device.<br>
+  <span style="opacity:.7">Version <span id="verFoot">2.3</span></span>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -432,6 +433,12 @@
       <label>Fuel API key — optional</label>
       <input type="text" id="sFuelKey" placeholder="paste key (optional)" />
       <div class="hint">No key? The ↻ update button just re-applies your saved Texas default.</div>
+    </div>
+
+    <div class="seg">App</div>
+    <div class="field">
+      <button class="btn-ghost" id="checkUpdate" style="margin-top:0">↻ Check for updates &amp; reload</button>
+      <div class="hint">Pulls the latest version from the server and clears the cached copy. Use this if the app seems stuck on an old version. Current: v<span id="verSettings">2.3</span></div>
     </div>
 
     <button class="save" id="saveSettings">Save settings</button>
@@ -956,6 +963,36 @@ $("resetBtn").addEventListener("click",()=>{
   $("result").style.display="none";
   window.scrollTo({top:0,behavior:"smooth"});
   $("payout").focus();
+});
+
+/* ---------- version + update ---------- */
+const APP_VERSION="2.3";
+["verLabel","verFoot","verSettings"].forEach(id=>{
+  const el=$(id); if(el) el.textContent = id==="verLabel" ? "v"+APP_VERSION : APP_VERSION;
+});
+
+$("checkUpdate").addEventListener("click",async()=>{
+  const btn=$("checkUpdate");
+  btn.textContent="↻ Updating…";
+  try{
+    // Clear all app caches so the next load pulls fresh files.
+    if("caches" in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+    // Tell any waiting service worker to take over immediately.
+    if("serviceWorker" in navigator){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){
+        await reg.update();
+        if(reg.waiting) reg.waiting.postMessage("SKIP_WAITING");
+      }
+    }
+  }catch(e){ /* ignore; reload anyway */ }
+  // Hard reload with a cache-busting query so the HTML itself is refetched.
+  const u=new URL(location.href);
+  u.searchParams.set("_u",Date.now());
+  location.replace(u.toString());
 });
 
 /* ---------- register service worker ---------- */
