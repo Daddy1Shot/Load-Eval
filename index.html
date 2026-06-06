@@ -104,6 +104,16 @@
   .leg-miles input{font-size:14px;padding:9px 10px;text-align:center;}
   .mi-tag{font-size:9.5px;color:var(--muted-2);text-align:center;margin-top:3px;letter-spacing:.3px;text-transform:uppercase;}
 
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .chip{background:var(--panel-2);border:1px solid var(--line);color:var(--green);
+    border-radius:20px;font-size:11px;padding:6px 12px;cursor:pointer;font-family:inherit;transition:.12s;}
+  .chip:active{transform:scale(.94);background:var(--ink);}
+  .place-row{display:flex;align-items:center;gap:8px;background:var(--ink);border:1px solid var(--line);
+    border-radius:10px;padding:9px 11px;margin-bottom:7px;font-size:12px;}
+  .place-row .pl-lbl{font-weight:700;color:var(--cream);flex:0 0 auto;}
+  .place-row .pl-addr{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;}
+  .place-row .pl-del{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;flex:0 0 auto;padding:0 4px;}
+
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
   .toggle{display:flex;align-items:center;justify-content:space-between;
@@ -212,7 +222,10 @@
       <p>Deadhead-aware load evaluator</p>
     </div>
   </div>
-  <button class="gear" id="openSettings" aria-label="Settings">⚙</button>
+  <div style="display:flex;gap:8px">
+    <button class="gear" id="openLog" aria-label="Load log">▤</button>
+    <button class="gear" id="openSettings" aria-label="Settings">⚙</button>
+  </div>
 </header>
 
 <!-- FUEL BANNER -->
@@ -248,6 +261,7 @@
       <div class="pin pick">P</div>
       <label>Pickup</label>
       <input type="text" id="addrPick" placeholder="Pickup address" />
+      <div id="pickChips" class="chips"></div>
     </div>
     <div class="stop">
       <div class="pin drop">D</div>
@@ -280,7 +294,7 @@
   <div class="field" style="margin-top:14px">
     <label>Total time, all legs (minutes)</label>
     <input type="number" id="mins" inputmode="numeric" placeholder="e.g. 90" />
-    <div class="hint">Include drive + expected load/unload wait. Drives your $/hour.</div>
+    <div class="hint" id="minsHint">Include drive + expected load/unload wait. Drives your $/hour.</div>
   </div>
 
   <div class="field">
@@ -330,11 +344,12 @@
 
     <div class="breakdown">
       <div class="bl"><span>Payout</span><span id="bPay">—</span></div>
-      <div class="bl"><span>Fuel cost</span><span id="bFuel">—</span></div>
+      <div class="bl"><span id="bFuelLbl">Fuel cost</span><span id="bFuel">—</span></div>
       <div class="bl"><span>Wear &amp; tear</span><span id="bWear">—</span></div>
       <div class="bl tot"><span>Net profit</span><span id="bProfit">—</span></div>
     </div>
   </div>
+  <button class="btn-ghost" id="saveLogBtn" style="border-color:var(--green-deep);color:var(--green)">＋ Save to log</button>
   <button class="btn-ghost" id="resetBtn">Clear &amp; evaluate another</button>
 </div>
 
@@ -353,8 +368,19 @@
     <div class="seg">Vehicle</div>
     <div class="field"><label>Vehicle label</label><input type="text" id="sVeh" /></div>
     <div class="splitfield">
-      <div class="field"><label>MPG</label><input type="number" id="sMpg" inputmode="decimal" /></div>
+      <div class="field"><label>Empty MPG</label><input type="number" id="sMpg" inputmode="decimal" /></div>
       <div class="field"><label>Wear &amp; tear $/mi</label><input type="number" id="sWear" inputmode="decimal" /></div>
+    </div>
+    <div class="splitfield">
+      <div class="field"><label>Working max load (lbs)</label><input type="number" id="sMaxLbs" inputmode="numeric" /></div>
+      <div class="field"><label>MPG lost at max load</label><input type="number" id="sMpgDrop" inputmode="decimal" /></div>
+    </div>
+    <div class="hint">Cargo weight only slows the loaded leg. At max load the van loses this many MPG (ProMaster 1500: ~3, i.e. 13→10). Empty deadhead legs always use Empty MPG. Tune after a few heavy runs.</div>
+
+    <div class="field" style="margin-top:14px">
+      <label>Pickup wait buffer (min)</label>
+      <input type="number" id="sWait" inputmode="numeric" />
+      <div class="hint">Auto-added to the calculated drive time, since the API only knows driving — not the wait at the Lowe's desk. Lowe's runs slow, so 30 is a fair default. Still editable per load.</div>
     </div>
 
     <div class="seg">Home Base</div>
@@ -363,6 +389,15 @@
       <input type="text" id="sHome" />
       <div class="hint">Relocating soon? Update this one field and every new load uses it.</div>
     </div>
+
+    <div class="seg">Saved Pickups (Lowe's, etc.)</div>
+    <div id="placeList"></div>
+    <div class="splitfield">
+      <div class="field"><label>Label</label><input type="text" id="sPlaceLbl" placeholder="Lowe's Abilene" /></div>
+      <div class="field"><label>Address</label><input type="text" id="sPlaceAddr" placeholder="address or coords" /></div>
+    </div>
+    <button class="btn-ghost" id="addPlace" style="margin-top:0">+ Add saved pickup</button>
+    <div class="hint">Pickups are usually a known Lowe's. Save the ones you get dispatched from, then tap to fill the Pickup field at offer time — even before you accept and the app reveals it.</div>
 
     <div class="seg">Decision Thresholds ($ / total mile)</div>
     <div class="splitfield">
@@ -403,6 +438,20 @@
   </div>
 </div>
 
+<!-- LOG MODAL -->
+<div class="modal" id="logModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 class="display">Load Log</h3>
+    <p class="sub" id="logCount">No saved loads yet.</p>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="mini" id="exportCsv" style="flex:1;padding:11px;font-size:12px">⤓ Export / Email CSV</button>
+      <button class="mini" id="clearLog" style="flex:0 0 auto;padding:11px 14px;font-size:12px;color:var(--red);border-color:var(--red)">Clear all</button>
+    </div>
+    <div id="logList"></div>
+  </div>
+</div>
+
 <script>
 /* ---------- DEFAULTS (Kory's baseline) ---------- */
 const DEFAULTS = {
@@ -415,6 +464,10 @@ const DEFAULTS = {
   hour:20,       // $/hour floor
   fuel:3.72,     // TX avg, Jun 2026
   fuelSrc:"TX default",
+  maxLbs:3500,   // realistic working max payload
+  mpgDrop:3,     // MPG lost at full load (13 -> 10)
+  waitMin:30,    // default pickup wait (Lowe's is slow) added to drive time
+  places:[],     // saved locations: [{label, addr}]
   provider:"none",
   distKey:"",
   fuelKey:""
@@ -440,6 +493,7 @@ function paintStrip(){
   $("apiState").textContent = live
     ? "Distance API active ("+cfg.provider+")"
     : "Distance API not configured — manual miles";
+  if(typeof renderChips==="function") renderChips();
 }
 paintStrip();
 
@@ -455,19 +509,54 @@ $("swStayout").addEventListener("click",()=>{
 });
 
 /* ---------- settings modal ---------- */
+function renderPlacesSettings(){
+  const list=$("placeList");
+  list.innerHTML="";
+  if(!cfg.places.length){
+    list.innerHTML='<div class="hint" style="margin:0 0 8px">No saved pickups yet.</div>';
+  }
+  cfg.places.forEach((p,i)=>{
+    const row=document.createElement("div");row.className="place-row";
+    row.innerHTML=`<span class="pl-lbl">${p.label}</span><span class="pl-addr">${p.addr}</span><button class="pl-del" data-i="${i}">×</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll(".pl-del").forEach(b=>b.addEventListener("click",()=>{
+    cfg.places.splice(parseInt(b.dataset.i),1);saveCfg(cfg);renderPlacesSettings();renderChips();
+  }));
+}
+function renderChips(){
+  const box=$("pickChips");box.innerHTML="";
+  cfg.places.forEach(p=>{
+    const c=document.createElement("button");c.className="chip";c.textContent=p.label;
+    c.addEventListener("click",()=>{$("addrPick").value=p.addr;});
+    box.appendChild(c);
+  });
+}
 function openSettings(){
   $("sVeh").value=cfg.veh;$("sMpg").value=cfg.mpg;$("sWear").value=cfg.wear;
+  $("sMaxLbs").value=cfg.maxLbs;$("sMpgDrop").value=cfg.mpgDrop;$("sWait").value=cfg.waitMin;
   $("sHome").value=cfg.home;$("sReject").value=cfg.reject;$("sGood").value=cfg.good;
   $("sHour").value=cfg.hour;$("sFuel").value=cfg.fuel;$("sProvider").value=cfg.provider;
   $("sDistKey").value=cfg.distKey;$("sFuelKey").value=cfg.fuelKey;
+  renderPlacesSettings();
   $("settingsModal").classList.add("show");
 }
 $("openSettings").addEventListener("click",openSettings);
 $("settingsModal").addEventListener("click",e=>{if(e.target===$("settingsModal"))$("settingsModal").classList.remove("show");});
+$("addPlace").addEventListener("click",()=>{
+  const lbl=$("sPlaceLbl").value.trim(), addr=$("sPlaceAddr").value.trim();
+  if(!lbl||!addr){alert("Enter both a label and an address.");return;}
+  cfg.places.push({label:lbl,addr});saveCfg(cfg);
+  $("sPlaceLbl").value="";$("sPlaceAddr").value="";
+  renderPlacesSettings();renderChips();
+});
 $("saveSettings").addEventListener("click",()=>{
   cfg.veh=$("sVeh").value||"Cargo Van";
   cfg.mpg=parseFloat($("sMpg").value)||13;
   cfg.wear=parseFloat($("sWear").value)||0;
+  cfg.maxLbs=parseFloat($("sMaxLbs").value)||3500;
+  cfg.mpgDrop=parseFloat($("sMpgDrop").value)||3;
+  cfg.waitMin=parseInt($("sWait").value)||0;
   cfg.home=$("sHome").value.trim();
   cfg.reject=parseFloat($("sReject").value)||0.75;
   cfg.good=parseFloat($("sGood").value)||1.25;
@@ -515,8 +604,14 @@ $("lookupBtn").addEventListener("click",async()=>{
     if(result){
       $("mi1").value=result.legs[0].miles.toFixed(1);
       $("mi2").value=result.legs[1].miles.toFixed(1);
-      if(!stayOut)$("mi3").value=result.legs[2].miles.toFixed(1);
-      if(result.minutes)$("mins").value=Math.round(result.minutes);
+      if(!stayOut && result.legs[2])$("mi3").value=result.legs[2].miles.toFixed(1);
+      if(result.minutes){
+        const drive=Math.round(result.minutes);
+        $("mins").value = drive + (cfg.waitMin||0);
+        if(cfg.waitMin>0){
+          $("minsHint").textContent=`${drive} min drive + ${cfg.waitMin} min pickup wait. Edit if needed.`;
+        }
+      }
     }
   }catch(err){
     alert("Lookup failed — enter miles manually.\n("+err.message+")");
@@ -524,29 +619,68 @@ $("lookupBtn").addEventListener("click",async()=>{
   $("lookupBtn").textContent="⤓ Auto-fill miles & time from addresses";
 });
 
-/* ONE matrix call per trip. We send origins=[home,pick,drop] x
-   destinations=[pick,drop,ret] and read the DIAGONAL:
-     rows[0].elements[0] = home->pick   (leg 1)
-     rows[1].elements[1] = pick->drop   (leg 2, paid)
-     rows[2].elements[2] = drop->ret    (leg 3)
-   That's a single request for all three legs. */
+/* COST-EFFICIENT: 3 paired one-to-one legs = 3 elements/trip (not 9).
+   element = origins × destinations, so 1 origin × 1 destination = 1 element.
+   Legs: home->pick, pick->drop, drop->ret.
+   (A 3x3 matrix would bill 9 elements but we'd only read 3 — pure waste.) */
 const M_PER_MILE = 1609.344;
 
 async function getMatrix(origins,destinations,cfg){
-  if(cfg.provider==="distancematrix"){
-    return await dmAi(origins,destinations,cfg.distKey);
-  }
-  if(cfg.provider==="google"){
-    return await googleMatrix(origins,destinations,cfg.distKey);
-  }
+  // origins=[home,pick,drop], destinations=[pick,drop,ret]
+  // If ret is empty (staying out), skip leg 3 entirely — saves an element.
+  const pairs=[
+    [origins[0],destinations[0]],  // home -> pick
+    [origins[1],destinations[1]]   // pick -> drop
+  ];
+  if(destinations[2]) pairs.push([origins[2],destinations[2]]); // drop -> ret
+  if(cfg.provider==="distancematrix") return await dmAiLegs(pairs,cfg.distKey);
+  if(cfg.provider==="google")        return await googleLegs(pairs,cfg.distKey);
   throw new Error("no provider selected");
 }
 
-/* ---- Distancematrix.ai (free tier, Google-compatible) ---- */
+async function oneLeg(baseUrl,origin,dest){
+  const url=baseUrl
+    .replace("__O__",encodeURIComponent(origin))
+    .replace("__D__",encodeURIComponent(dest));
+  const res=await fetch(url);
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const j=await res.json();
+  if(j.status && j.status!=="OK") throw new Error(j.status);
+  const el=j.rows && j.rows[0] && j.rows[0].elements && j.rows[0].elements[0];
+  if(!el || (el.status && el.status!=="OK")) throw new Error("no route for a leg");
+  return { miles: el.distance.value / M_PER_MILE,
+           minutes: (el.duration?el.duration.value:0)/60 };
+}
+
+/* ---- Distancematrix.ai: 3 paired calls (3 elements total) ---- */
+async function dmAiLegs(pairs,key){
+  const base=`https://api.distancematrix.ai/maps/api/distancematrix/json`+
+             `?origins=__O__&destinations=__D__&units=imperial&key=${encodeURIComponent(key)}`;
+  const legs=[]; let totalMin=0;
+  for(const [o,d] of pairs){
+    const leg=await oneLeg(base,o,d);
+    legs.push(leg); totalMin+=leg.minutes;
+  }
+  return { legs, minutes: totalMin };
+}
+
+/* ---- Google: 3 paired calls (same shape; needs referrer key/proxy for CORS) ---- */
+async function googleLegs(pairs,key){
+  const base=`https://maps.googleapis.com/maps/api/distancematrix/json`+
+             `?origins=__O__&destinations=__D__&units=imperial&key=${encodeURIComponent(key)}`;
+  const legs=[]; let totalMin=0;
+  for(const [o,d] of pairs){
+    const leg=await oneLeg(base,o,d);
+    legs.push(leg); totalMin+=leg.minutes;
+  }
+  return { legs, minutes: totalMin };
+}
+
+/* legacy helpers kept for reference (unused) */
 async function dmAi(origins,destinations,key){
   const o=origins.map(encodeURIComponent).join("|");
   const d=destinations.map(encodeURIComponent).join("|");
-  const url=`https://api.distancematrix.ai/maps/api/distancematrix/json`+
+  const url=`https://maps.googleapis.com/maps/api/distancematrix/json`+
             `?origins=${o}&destinations=${d}&units=imperial&key=${encodeURIComponent(key)}`;
   const res=await fetch(url);
   if(!res.ok) throw new Error("HTTP "+res.status);
@@ -586,15 +720,28 @@ function readDiagonal(rows){
 }
 
 /* ---------- THE ENGINE ---------- */
+function loadedMpg(cargoLbs){
+  // Weight only hurts the loaded leg. Linear drop, floored at 10.
+  // Full working load (cfg.maxLbs, default 3500) costs cfg.mpgDrop MPG (default 3).
+  if(!cargoLbs || cargoLbs<=0) return cfg.mpg;
+  const drop = (cargoLbs / cfg.maxLbs) * cfg.mpgDrop;
+  return Math.max(10, cfg.mpg - drop);
+}
+
 function evaluate(){
   const payout=num("payout");
   const mi1=num("mi1"), mi2=num("mi2"), mi3=stayOut?0:num("mi3");
   const total=mi1+mi2+mi3, dead=mi1+mi3, loaded=mi2;
   const mins=num("mins"), hrs=mins/60;
+  const cargo=num("weight");
 
   if(payout<=0 || total<=0){alert("Enter at least a payout and the leg miles (Home→Pick→Drop).");return;}
 
-  const fuelCost=(total/cfg.mpg)*cfg.fuel;
+  // Loaded leg burns more if heavy; deadhead legs always run empty at baseline MPG.
+  const lMpg=loadedMpg(cargo);
+  const fuelLoaded = loaded>0 ? (loaded/lMpg)*cfg.fuel : 0;
+  const fuelDead   = dead>0   ? (dead/cfg.mpg)*cfg.fuel : 0;
+  const fuelCost = fuelLoaded + fuelDead;
   const wearCost=total*cfg.wear;
   const opCost=fuelCost+wearCost;
   const profit=payout-opCost;
@@ -614,7 +761,8 @@ function evaluate(){
   else tier="marg";
 
   paintResult({payout,total,dead,loaded,mins,hrs,fuelCost,wearCost,profit,
-    perTotal,perLoaded,perHour,tier,failMile,failProfit,failHour,goodMile});
+    perTotal,perLoaded,perHour,tier,failMile,failProfit,failHour,goodMile,
+    cargo,lMpg});
 }
 
 function paintResult(r){
@@ -685,14 +833,123 @@ function paintResult(r){
 
   $("bPay").textContent=money(r.payout);
   $("bFuel").textContent="-"+money(r.fuelCost);
+  if(r.cargo>0 && r.lMpg < cfg.mpg){
+    $("bFuelLbl").innerHTML='Fuel cost <span style="color:var(--amber);font-size:10px">('+r.cargo.toLocaleString()+' lbs → '+r.lMpg.toFixed(1)+' mpg loaded)</span>';
+  } else {
+    $("bFuelLbl").textContent="Fuel cost";
+  }
   $("bWear").textContent="-"+money(r.wearCost);
   $("bProfit").textContent=money(r.profit);
   $("bProfit").className=r.profit>=0?"pos":"neg";
 
   $("result").scrollIntoView({behavior:"smooth",block:"start"});
+  lastResult={...r,
+    home:$("addrHome").value.trim(),
+    pickup:$("addrPick").value.trim(),
+    dropoff:$("addrDrop").value.trim(),
+    ts:Date.now()};
+  $("saveLogBtn").textContent="＋ Save to log";
+  $("saveLogBtn").disabled=false;
 }
+let lastResult=null;
 
 $("evalBtn").addEventListener("click",evaluate);
+
+/* ---------- LOAD LOG ---------- */
+const LOG="takeload.log.v1";
+function getLog(){try{return JSON.parse(localStorage.getItem(LOG))||[];}catch(e){return [];}}
+function setLog(a){localStorage.setItem(LOG,JSON.stringify(a));}
+
+$("saveLogBtn").addEventListener("click",()=>{
+  if(!lastResult)return;
+  const log=getLog();
+  log.unshift({
+    ts:lastResult.ts,
+    verdict:lastResult.tier,
+    payout:lastResult.payout,
+    total:+lastResult.total.toFixed(1),
+    dead:+lastResult.dead.toFixed(1),
+    loaded:+lastResult.loaded.toFixed(1),
+    mins:lastResult.mins,
+    cargo:lastResult.cargo||0,
+    fuel:+lastResult.fuelCost.toFixed(2),
+    wear:+lastResult.wearCost.toFixed(2),
+    profit:+lastResult.profit.toFixed(2),
+    perTotal:+lastResult.perTotal.toFixed(2),
+    perLoaded:+(lastResult.perLoaded||0).toFixed(2),
+    perHour:lastResult.perHour!==null?+lastResult.perHour.toFixed(2):"",
+    pickup:lastResult.pickup||"",
+    dropoff:lastResult.dropoff||""
+  });
+  setLog(log);
+  $("saveLogBtn").textContent="✓ Saved";
+  $("saveLogBtn").disabled=true;
+});
+
+function openLog(){
+  const log=getLog();
+  $("logCount").textContent = log.length ? `${log.length} saved load${log.length>1?"s":""}` : "No saved loads yet.";
+  const list=$("logList");list.innerHTML="";
+  const vmap={good:["🟢","#34d17a"],marg:["🟡","#f5b942"],rej:["⛔","#ef5d57"]};
+  log.forEach((e,i)=>{
+    const [ic,col]=vmap[e.verdict]||["•","#8fae9f"];
+    const d=new Date(e.ts);
+    const row=document.createElement("div");
+    row.style.cssText="background:var(--ink);border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;font-size:12px;";
+    row.innerHTML=
+      `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">`+
+        `<span style="font-weight:700;color:${col}">${ic} ${money(e.payout)} · ${e.total}mi · $${e.perTotal.toFixed(2)}/mi</span>`+
+        `<button data-i="${i}" class="logDel" style="background:none;border:none;color:var(--red);font-size:15px;cursor:pointer">×</button>`+
+      `</div>`+
+      `<div style="color:var(--muted);font-size:10.5px">Profit ${money(e.profit)} · ${e.perHour!==""?money(e.perHour)+"/hr":"—/hr"} · ${e.cargo?e.cargo+"lbs · ":""}${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll(".logDel").forEach(b=>b.addEventListener("click",()=>{
+    const log=getLog();log.splice(parseInt(b.dataset.i),1);setLog(log);openLog();
+  }));
+  $("logModal").classList.add("show");
+}
+$("openLog").addEventListener("click",openLog);
+$("logModal").addEventListener("click",e=>{if(e.target===$("logModal"))$("logModal").classList.remove("show");});
+
+$("clearLog").addEventListener("click",()=>{
+  if(confirm("Delete all saved loads? This can't be undone.")){setLog([]);openLog();}
+});
+
+function toCSV(){
+  const log=getLog();
+  const cols=["date","time","verdict","payout","total_mi","deadhead_mi","loaded_mi","minutes","cargo_lbs","fuel","wear","profit","per_total_mi","per_loaded_mi","per_hour","pickup","dropoff"];
+  const rows=[cols.join(",")];
+  const esc=v=>{v=(v===undefined||v===null)?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  log.forEach(e=>{
+    const d=new Date(e.ts);
+    rows.push([
+      d.toLocaleDateString(),d.toLocaleTimeString(),
+      e.verdict,e.payout,e.total,e.dead,e.loaded,e.mins,e.cargo,
+      e.fuel,e.wear,e.profit,e.perTotal,e.perLoaded,e.perHour,e.pickup,e.dropoff
+    ].map(esc).join(","));
+  });
+  return rows.join("\n");
+}
+
+$("exportCsv").addEventListener("click",async()=>{
+  const log=getLog();
+  if(!log.length){alert("No loads to export yet. Evaluate a load and tap 'Save to log' first.");return;}
+  const csv=toCSV();
+  const fname=`load-log-${new Date().toISOString().slice(0,10)}.csv`;
+  const file=new File([csv],fname,{type:"text/csv"});
+
+  // Best path on phones: native share sheet -> Mail, Drive, etc.
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:"Load Log",text:"Courier load log export"}); return; }
+    catch(e){ /* user cancelled or failed -> fall through to download */ }
+  }
+  // Fallback: download the file.
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  const a=document.createElement("a");a.href=url;a.download=fname;document.body.appendChild(a);a.click();
+  a.remove();URL.revokeObjectURL(url);
+});
+
 $("resetBtn").addEventListener("click",()=>{
   ["payout","addrPick","addrDrop","addrRet","mi1","mi2","mi3","mins","weight"].forEach(id=>$(id).value="");
   if(stayOut)$("swStayout").click();

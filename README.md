@@ -88,7 +88,7 @@ The app works perfectly with **manual miles** — type each leg by hand and ever
    - **Save**
 4. On a load, fill in Home / Pickup / Dropoff addresses → tap **"Auto-fill miles & time."**
 
-**Usage math:** the app makes **one matrix call per trip** (all 3 legs in a single request), so 1,000 free lookups ≈ **~330 trips/month**. Plenty.
+**Usage math:** the app makes **3 paired one-to-one lookups per trip** (one per leg = 3 billable elements; only 2 if you toggle "Staying out"). At 1 element each, 1,000 free elements ≈ **~330 trips/month**. An earlier build used a 3×3 matrix that billed 9 elements/trip — fixed in v2.2 to bill only the 3 legs actually used.
 
 ### Google (alternative)
 Provider "Google Compute Route Matrix" is also built in, but a Google key needs referrer restrictions or a proxy to work from a browser (CORS), and Google's free pricing changed in March 2025. Distancematrix.ai is the simpler choice for a static site — use Google only if you already have a working key.
